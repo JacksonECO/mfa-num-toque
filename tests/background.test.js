@@ -220,3 +220,23 @@ test('EXPORT_DATA inclui as configurações atuais; IMPORT_DATA pode aplicá-las
   assert.equal(cfg.autocopiar, true);
   assert.equal(cfg.sessaoTimeoutMs, 90000);
 });
+
+/* ------------------------- listener cross-browser ------------------------- */
+
+test('onMessage responde via sendResponse e retorna true (exigido pelo Chrome)', async () => {
+  globalThis.browser = criarBrowserMock();
+  const resposta = await new Promise((resolve) => {
+    const retorno = bg.aoReceberMensagem({ type: 'IS_INITIALIZED' }, {}, resolve);
+    // `true` síncrono mantém o canal aberto no Chrome; uma Promise seria ignorada.
+    assert.equal(retorno, true);
+  });
+  assert.deepEqual(resposta, { inicializado: false });
+});
+
+test('onMessage: SET_MASTER_PASSWORD chega ao popup como { ok: true }', async () => {
+  globalThis.browser = criarBrowserMock();
+  const resposta = await new Promise((resolve) => {
+    bg.aoReceberMensagem({ type: 'SET_MASTER_PASSWORD', senha: 'senha-mestra-123' }, {}, resolve);
+  });
+  assert.deepEqual(resposta, { ok: true });
+});

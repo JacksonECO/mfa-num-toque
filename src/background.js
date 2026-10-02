@@ -815,9 +815,26 @@ export async function rotear(mensagem) {
   }
 }
 
+/**
+ * Listener de `runtime.onMessage` compatível com Firefox e Chrome.
+ *
+ * O Firefox aceita que o listener devolva uma Promise, mas o Chrome não: lá a
+ * Promise é ignorada, a porta da mensagem fecha sem resposta e o popup recebe
+ * `undefined` (sintoma: "Não foi possível criar a senha." e a tela de primeiro
+ * acesso reaparecendo para sempre). O caminho que funciona nos dois é o
+ * clássico: responder via `sendResponse` e retornar `true` (síncrono) para
+ * manter o canal aberto até a resposta assíncrona.
+ */
+export function aoReceberMensagem(mensagem, _remetente, responder) {
+  rotear(mensagem).then(responder, () =>
+    responder({ ok: false, erro: 'Erro interno ao processar a mensagem.' }),
+  );
+  return true;
+}
+
 // Registro dos listeners (no topo, síncrono). Os guards `?.` permitem importar
 // este módulo nos testes/Node, onde `browser` não existe.
-globalThis.browser?.runtime?.onMessage.addListener((mensagem) => rotear(mensagem));
+globalThis.browser?.runtime?.onMessage.addListener(aoReceberMensagem);
 
 // Keep-alive da sessão (task 21): o popup abre uma porta de longa duração ao
 // carregar. Enquanto ela estiver conectada, a sessão não expira por inatividade —
